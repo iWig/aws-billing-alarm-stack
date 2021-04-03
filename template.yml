@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: A simple Cloudformation stack that setups email notifications via SNS for spending/billing charges in your AWS accounts. 
+Parameters: 
+  EmailAddress:
+    Type: String
+    Description: Email address to send billing alerts to.
+  AlarmThreshold:
+    Type: Number
+    Description: Spending/billing charges threshold for alarm to trigger (greater than value).
+Resources:
+  SpendingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: 
+        Fn::Join:
+          - ''
+          - - Alarm if AWS spending is over $
+            - Ref: AlarmThreshold
+      Namespace: AWS/Billing
+      MetricName: EstimatedCharges
+      Dimensions:
+        - Name: Currency
+          Value: USD
+      Statistic: Maximum
+      Period: 21600 # 6 hours in seconds
+      EvaluationPeriods: 1
+      Threshold:
+        Ref: AlarmThreshold
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - Ref: SpendingNotificationTopic
+
+  SpendingNotificationTopic:
+    Type: AWS::SNS::Topic
+
+  SpendingTopicSubsciption: 
+    Type: AWS::SNS::Subscription
+    Properties: 
+      Endpoint:
+        Ref: EmailAddress
+      Protocol: email
+      TopicArn:
+        Ref: SpendingNotificationTopic
